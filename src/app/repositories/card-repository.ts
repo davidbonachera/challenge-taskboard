@@ -1,0 +1,103 @@
+import { ICard } from '@/app/models/card';
+import {createClient} from "@/app/utils/supabase/client";
+
+export interface ICardRepository {
+    getCards(boardId: string): Promise<ICard[]>;
+    getCardById(cardId: string): Promise<ICard | null>;
+    createCard(card: Omit<ICard, 'id' | 'created_at' | 'updated_at'>): Promise<ICard>;
+    updateCard(cardId: string, updates: Partial<ICard>): Promise<ICard>;
+    deleteCard(cardId: string): Promise<void>;
+}
+
+export class CardRepository implements ICardRepository {
+    private supabase;
+
+    constructor() {
+        this.supabase = createClient();
+    }
+
+    async getCards(boardId: string): Promise<ICard[]> {
+        const { data, error } = await this.supabase
+            .from('cards')
+            .select('*')
+            .eq('board_id', boardId);
+
+        if (error) {
+            throw new Error('Failed to fetch cards');
+        }
+
+        return data as ICard[];
+    }
+
+    async getCardById(cardId: string): Promise<ICard | null> {
+        const { data, error } = await this.supabase
+            .from('cards')
+            .select('*')
+            .eq('id', cardId)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return null;
+            }
+            throw new Error('Failed to fetch card');
+        }
+
+        return data as ICard;
+    }
+
+    async createCard(card: Omit<ICard, 'id' | 'created_at' | 'updated_at'>): Promise<ICard> {
+        const { data, error } = await this.supabase
+            .from('cards')
+            .insert([card])
+            .single();
+
+        if (error) {
+            throw new Error('Failed to create card');
+        }
+
+        return data as ICard;
+    }
+
+    async updateCard(cardId: string, updates: Partial<ICard>): Promise<ICard> {
+        const { data: existingCard, error: fetchError } = await this.supabase
+            .from('cards')
+            .select('*')
+            .eq('id', cardId)
+            .single();
+
+        if (fetchError) {
+            throw new Error(`Card with id ${cardId} not found`);
+        }
+
+        const { data, error } = await this.supabase
+            .from('cards')
+            .update({
+                title: updates.title || existingCard.title,
+                description: updates.description || existingCard.description,
+                status: updates.status || existingCard.status,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', cardId)
+            .select('*')
+            .single();
+
+        if (error) {
+            console.error('Supabase update error:', error);
+            throw new Error(`Failed to update card: ${error.message}`);
+        }
+
+        return data as ICard;
+    }
+
+    async deleteCard(cardId: string): Promise<void> {
+        const { error } = await this.supabase
+            .from('cards')
+            .delete()
+            .eq('id', cardId);
+
+        if (error) {
+            throw new Error('Failed to delete card');
+        }
+    }
+}
