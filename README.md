@@ -1,4 +1,5 @@
 # Quickstart
+![img.png](img.png)
 To run the program you just need to:
 - `npm i` or `pnpm i`
 - `pnpm dev` or `npm run dev`
