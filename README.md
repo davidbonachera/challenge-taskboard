@@ -83,3 +83,26 @@ One of the main challenges when using localStorage is keeping it updated and acc
 - In a scalable APP, I would separate BE and FE responsabilities more, API would be on a seperate server and ensure single operations of logic with DB.
 - Add E2E to simulate user behavior
 - Add security over the API with JWT or other tokens mechanism.
+
+
+----
+
+# After feedback
+
+- Removed Client SDK of Supabase
+- Added: `async moveCard()` in the card-service.ts
+  - Better isolation of business logic within the card repository instead of using update for all modifications.
+  - Added a business rule that 1 card can be moved at the time in any direction  (discovered when adding test)
+  - Added Conflict error for server-side checking (since moving is done by API now)
+- Removed card repository from service for better separation of concern, service only create HTTP call to API and manage business logic.
+- Discovered a dark mode issue on a second laptop, removed the darkmode feature.
+- Added the `cards/move` endpoint and the GET `cards/[id]` endpoint
+- Added conflict check at repository level
+- This new structure forced me to rethink my test of the card-service and add conflict test
+  1. I need to mock fetch and not mock Supabase.
+  2. Tests are now grouped by Actions for the card service.
+  3. Simulate conflict in testing to showcase the behavior of lock mechanism and conflcit errors. 
+     - Request 1: GET /2 → mockCurrentCard 
+     - Request 2: GET /2 → mockCurrentCard
+     - Update 1: POST /move to DOING → mockUpdatedCard 
+     - Update 2: POST /move to DONE → mockConflictError

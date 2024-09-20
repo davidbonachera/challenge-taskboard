@@ -1,13 +1,7 @@
 import { ICard, CardStatus } from '@/app/models/card';
-import { CardRepository, ICardRepository } from "@/app/repositories/card-repository";
 
 export class CardService {
     private baseUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/v1/cards`;
-    private repository: ICardRepository;
-
-    constructor(repository: ICardRepository = new CardRepository()) {
-        this.repository = repository;
-    }
 
     /**
      * Fetches all cards for a specific board.
@@ -29,42 +23,38 @@ export class CardService {
         return response.json();
     }
 
-
-
     /**
      * Moves a card to a new status, enforcing business rules.
-     * The only one directly calling Supabase SDK for convenience
      * @param cardId - The ID of the card to move.
      * @param newStatus - The new status to assign to the card.
-     * @returns The updated card.
      * @throws Error if business rules are violated.
      */
     async moveCard(cardId: string, newStatus: CardStatus): Promise<ICard> {
-        const card = await this.repository.getCardById(cardId);
-        if (!card) {
+        // eslint-disable-next-line react/no-is-mounted
+        const currentCard = await this.getCardById(cardId);
+        if (!currentCard) {
             throw new Error('Card not found');
         }
 
-        if (card.status === CardStatus.DONE) {
-            throw new Error('Cannot move cards from DONE');
+        const response = await fetch(`${this.baseUrl}/move`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ cardId, newStatus, updated_at: currentCard.updated_at }),
+        });
+
+        if (response.status === 409) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Conflict occurred while moving the card');
         }
 
-        if (newStatus === CardStatus.DOING) {
-            const cardsCount = (await this.repository.getCards(card.board_id)).filter(
-                (c) => c.status === CardStatus.DOING
-            );
-            if (cardsCount.length >= 2) {
-                throw new Error('Cannot have more than 2 cards in DOING');
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to move card');
         }
 
-        const updates: Partial<ICard> = {
-            ...card,
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-        };
-
-        return this.repository.updateCard(cardId, updates);
+        return response.json();
     }
 
     /**
@@ -73,7 +63,22 @@ export class CardService {
      * @returns Promise<ICard | null> - The card object or null if not found.
      */
     async getCardById(cardId: string): Promise<ICard | null> {
-        return this.repository.getCardById(cardId);
+        const response = await fetch(`${this.baseUrl}/${cardId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (response.status === 404) {
+            return null;
+        }
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch card');
+        }
+
+        return response.json();
     }
 
     /**
@@ -91,7 +96,8 @@ export class CardService {
         });
 
         if (!response.ok) {
-            throw new Error('Cannot have more than 2 cards in DOING status');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Cannot have more than 2 cards in DOING status');
         }
 
         return response.json();

@@ -8,4 +8,5 @@ module.exports = {
         '^@/(.*)$': '<rootDir>/src/$1',
     },
     testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
+    setupFiles: ['./jest.setup.ts'],
 };

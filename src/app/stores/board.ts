@@ -48,7 +48,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     },
 
     /**
-     * Moves a card to a new status.
+     * Moves a card to a new status front-end side.
      * Check the timestamp for devices.
      * @param cardId - The ID of the card to move.
      * @param newStatus - The new status to assign to the card.

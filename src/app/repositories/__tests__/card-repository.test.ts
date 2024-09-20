@@ -1,8 +1,8 @@
 import { CardRepository } from '@/app/repositories/card-repository';
-import { createClient } from '@/app/utils/supabase/client';
 import { CardStatus } from '@/app/models/card';
+import {createClient} from "@/app/utils/supabase/server";
 
-jest.mock('@/app/utils/supabase/client');
+jest.mock('@/app/utils/supabase/server');
 
 describe('CardRepository', () => {
     let repository: CardRepository;
